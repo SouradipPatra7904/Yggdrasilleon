@@ -1,30 +1,59 @@
 #include "ThemeManager.hpp"
 
 void ThemeManager::applyTheme(QWidget *widget, Mode mode) {
+    currentMode = mode;
     QPalette palette;
 
     if (mode == Dark) {
-        palette.setColor(QPalette::Window, QColor("#183153"));
-        palette.setColor(QPalette::WindowText, Qt::white);
+        palette.setColor(QPalette::Window, darkBackground);
+        palette.setColor(QPalette::WindowText, darkText);
         palette.setColor(QPalette::Base, QColor("#072245"));
-        palette.setColor(QPalette::AlternateBase, QColor("#0ca678"));
-        palette.setColor(QPalette::ToolTipBase, Qt::white);
-        palette.setColor(QPalette::ToolTipText, Qt::white);
-        palette.setColor(QPalette::Text, Qt::white);
-        palette.setColor(QPalette::Button, QColor("#0ca678"));
-        palette.setColor(QPalette::ButtonText, Qt::white);
+        palette.setColor(QPalette::AlternateBase, darkNode);
+        palette.setColor(QPalette::ToolTipBase, darkText);
+        palette.setColor(QPalette::ToolTipText, darkText);
+        palette.setColor(QPalette::Text, darkText);
+
+        palette.setColor(QPalette::Button, darkButton);
+        palette.setColor(QPalette::ButtonText, darkButtonText);
     } else {
-        palette.setColor(QPalette::Window, QColor("#ffe4c4"));
-        palette.setColor(QPalette::WindowText, Qt::black);
-        palette.setColor(QPalette::Base, Qt::white);
-        palette.setColor(QPalette::AlternateBase, QColor("#63e6be"));
-        palette.setColor(QPalette::ToolTipBase, Qt::black);
-        palette.setColor(QPalette::ToolTipText, Qt::black);
-        palette.setColor(QPalette::Text, Qt::black);
-        palette.setColor(QPalette::Button, QColor("#63e6be"));
-        palette.setColor(QPalette::ButtonText, Qt::black);
+        palette.setColor(QPalette::Window, lightBackground);
+        palette.setColor(QPalette::WindowText, lightText);
+        palette.setColor(QPalette::Base, QColor(Qt::white));
+        palette.setColor(QPalette::AlternateBase, lightNode);
+        palette.setColor(QPalette::ToolTipBase, lightText);
+        palette.setColor(QPalette::ToolTipText, lightText);
+        palette.setColor(QPalette::Text, lightText);
+
+        palette.setColor(QPalette::Button, lightButton);
+        palette.setColor(QPalette::ButtonText, lightButtonText);
     }
 
     QApplication::setPalette(palette);
     widget->setPalette(palette);
+}
+
+// ---------- Getters ----------
+QColor ThemeManager::nodeColor() const {
+    return (currentMode == Dark) ? darkNode : lightNode;
+}
+
+QColor ThemeManager::edgeColor() const {
+    return (currentMode == Dark) ? darkEdge : lightEdge;
+}
+
+QColor ThemeManager::textColor() const {
+    return (currentMode == Dark) ? darkText : lightText;
+}
+
+QColor ThemeManager::highlightColor() const {
+    return (currentMode == Dark) ? darkHighlight : lightHighlight;
+}
+
+QColor ThemeManager::backgroundColor() const {
+    return (currentMode == Dark) ? darkBackground : lightBackground;
+}
+
+QColor ThemeManager::buttonColor() const
+{
+    return (currentMode == Dark ? darkButton : lightButton);
 }

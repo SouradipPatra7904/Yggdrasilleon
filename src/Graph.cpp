@@ -35,6 +35,22 @@ void Graph::addEdge(const std::string &from, const std::string &to,
     }
 }
 
+void Graph::removeEdge(const std::string &from, const std::string &to, bool directed)
+{
+    auto itFrom = adjacency.find(from);
+    auto itTo = adjacency.find(to);
+    if(itFrom != adjacency.end()) {
+        itFrom->second.erase(std::remove_if(itFrom->second.begin(), itFrom->second.end(),
+                                           [&](const Edge &e){ return e.to == to; }),
+                             itFrom->second.end());
+    }
+    if(!directed && itTo != adjacency.end()) {
+        itTo->second.erase(std::remove_if(itTo->second.begin(), itTo->second.end(),
+                                         [&](const Edge &e){ return e.to == from; }),
+                           itTo->second.end());
+    }
+}
+
 bool Graph::hasNode(const std::string &id) const {
     return adjacency.find(id) != adjacency.end();
 }
@@ -74,4 +90,9 @@ std::vector<Edge> Graph::neighbors(const std::string &id) const {
     auto it = adjacency.find(id);
     if (it == adjacency.end()) return {};
     return it->second; // copy
+}
+
+void Graph::clear()
+{
+    adjacency.clear();
 }

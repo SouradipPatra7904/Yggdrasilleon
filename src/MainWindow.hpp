@@ -30,34 +30,35 @@ private slots:
     void addEdge();
     void runAlgorithm();
     void toggleTheme();
+    void updateAlgorithmControls(int index);
+    void showHelp();       // new
+    void clearGraph();     // new
 
 private:
-    // Core graph + visualization
     Graph graph;
     GraphWidget *graphWidget;
 
-    // Theme
     ThemeManager *themeManager;
     QPushButton *themeToggleBtn;
+    QPushButton *saveOutputBtn;
+    QPushButton *helpBtn;         // new
+    QPushButton *clearGraphBtn;   // new
     bool isDarkMode;
 
-    // Node/Edge controls
     QLineEdit *nodeInput;
     QLineEdit *edgeFromInput;
     QLineEdit *edgeToInput;
     QSpinBox *weightInput;
     QCheckBox *directedInput;
 
-    // Algorithm controls
     QComboBox *algorithmBox;
     QLineEdit *startNodeInput;
     QLineEdit *endNodeInput;
     QPushButton *runBtn;
 
-    // Output area
     QTextEdit *outputBox;
+    QPushButton *clearOutputBtn;
 
-    // Layout helpers
     QWidget* createControlPanel();
 };
 

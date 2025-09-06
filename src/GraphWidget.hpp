@@ -9,22 +9,19 @@
 #include <string>
 #include "Graph.hpp"
 #include "Algorithms.hpp"
+#include "ThemeManager.hpp"
 
-// GraphWidget: handles drawing and animating the graph
 class GraphWidget : public QGraphicsView {
     Q_OBJECT
 
 public:
     explicit GraphWidget(QWidget *parent = nullptr);
 
-    // Set the graph data to display
     void setGraph(const Graph &graph);
-
-    // Animate algorithm results (sequence of step messages)
     void animateSteps(const std::vector<std::string> &steps);
-
-    // Clear all drawings
     void clearGraph();
+    void reset(); // clears scene + data
+    void setTheme(bool darkMode); // apply ThemeManager colors
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -32,16 +29,17 @@ protected:
 private:
     QGraphicsScene *scene;
     Graph currentGraph;
+    ThemeManager themeManager;
 
     std::unordered_map<std::string, QGraphicsEllipseItem*> nodeItems;
+    std::unordered_map<std::string, QGraphicsTextItem*> nodeLabels;
     std::vector<QGraphicsLineItem*> edgeItems;
 
-    // Animation state
     std::vector<std::string> stepMessages;
     int currentStep;
     QTimer stepTimer;
+    bool isDarkMode = false;
 
-    // Drawing helpers
     void drawGraph();
     void drawNode(const std::string &id, double x, double y);
     void drawEdge(const Edge &edge);
