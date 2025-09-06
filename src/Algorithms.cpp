@@ -2,6 +2,7 @@
 #include <queue>
 #include <set>
 #include <map>
+#include <sstream>
 
 // ------------------ DFS ------------------
 void dfs(const Graph &graph, const std::string &start, StepCallback callback) {
@@ -118,37 +119,74 @@ void primMST(const Graph &graph, const std::string &start, StepCallback callback
     using P = std::pair<int, std::pair<std::string, std::string>>; // weight, {u,v}
     std::priority_queue<P, std::vector<P>, std::greater<P>> pq;
 
+    // Result container: list of edges in MST
+    std::vector<Edge> mstEdges;
+    long long totalWeight = 0;
+
+    // start
     inMST.insert(start);
     for (auto &e : graph.neighbors(start))
         pq.push({e.weight.value_or(1), {start, e.to}});
 
     callback("Starting Prim's MST from " + start);
     while (!pq.empty()) {
-        auto [w, nodes] = pq.top(); pq.pop();
-        auto [u, v] = nodes;
-        if (inMST.count(v)) continue;
+        auto [w, nodesPair] = pq.top(); pq.pop();
+        auto [u, v] = nodesPair;
+        if (inMST.count(v)) {
+            callback("Skipping edge (already in MST or would form cycle): " + u + " - " + v + " (weight " + std::to_string(w) + ")");
+            continue;
+        }
+
+        // accept edge u-v
         inMST.insert(v);
+        Edge chosen; chosen.from = u; chosen.to = v; chosen.weight = w; chosen.directed = false;
+        mstEdges.push_back(chosen);
+        totalWeight += w;
         callback("Edge added to MST: " + u + " - " + v + " (weight " + std::to_string(w) + ")");
+
         for (auto &e : graph.neighbors(v)) {
             if (!inMST.count(e.to))
                 pq.push({e.weight.value_or(1), {v, e.to}});
         }
     }
+
+    // Compose final machine-parsable MST_RESULT message
+    std::ostringstream oss;
+    oss << "MST_RESULT: total=" << totalWeight << "; edges=";
+    bool first = true;
+    for (auto &e : mstEdges) {
+        if (!first) oss << ",";
+        oss << e.from << "-" << e.to << ":" << e.weight.value_or(1);
+        first = false;
+    }
+    callback(oss.str());
 }
 
 // ------------------ Kruskal's MST ------------------
 void kruskalMST(const Graph &graph, StepCallback callback) {
     auto nodes = graph.nodes();
     std::unordered_map<std::string, std::string> parent;
-    for (auto &n : nodes) parent[n] = n;
+    std::unordered_map<std::string, int> rankv;
+    for (auto &n : nodes) { parent[n] = n; rankv[n] = 0; }
 
-    auto find = [&](const std::string &x) {
+    std::function<std::string(const std::string&)> find = [&](const std::string &x)->std::string {
         std::string r = x;
         while (parent[r] != r) r = parent[r];
+        // path compression
+        std::string cur = x;
+        while (parent[cur] != r) {
+            std::string next = parent[cur];
+            parent[cur] = r;
+            cur = next;
+        }
         return r;
     };
     auto unite = [&](const std::string &x, const std::string &y) {
-        parent[find(x)] = find(y);
+        std::string rx = find(x), ry = find(y);
+        if (rx == ry) return;
+        if (rankv[rx] < rankv[ry]) parent[rx] = ry;
+        else if (rankv[ry] < rankv[rx]) parent[ry] = rx;
+        else { parent[ry] = rx; rankv[rx]++; }
     };
 
     auto edges = graph.edges();
@@ -156,11 +194,31 @@ void kruskalMST(const Graph &graph, StepCallback callback) {
               [](const Edge &a, const Edge &b) { return a.weight.value_or(1) < b.weight.value_or(1); });
 
     callback("Starting Kruskal's MST");
+
+    std::vector<Edge> mstEdges;
+    long long totalWeight = 0;
     for (auto &e : edges) {
         std::string u = e.from, v = e.to;
-        if (find(u) != find(v)) {
+        std::string ru = find(u), rv = find(v);
+        callback("Considering edge " + u + " - " + v + " (weight " + std::to_string(e.weight.value_or(1)) + ")");
+        if (ru != rv) {
             unite(u, v);
+            mstEdges.push_back(e);
+            totalWeight += e.weight.value_or(1);
             callback("Edge added to MST: " + u + " - " + v + " (weight " + std::to_string(e.weight.value_or(1)) + ")");
+        } else {
+            callback("Rejected (would form cycle): " + u + " - " + v);
         }
     }
+
+    // Compose final machine-parsable MST_RESULT message
+    std::ostringstream oss;
+    oss << "MST_RESULT: total=" << totalWeight << "; edges=";
+    bool first = true;
+    for (auto &e : mstEdges) {
+        if (!first) oss << ",";
+        oss << e.from << "-" << e.to << ":" << e.weight.value_or(1);
+        first = false;
+    }
+    callback(oss.str());
 }

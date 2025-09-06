@@ -1,40 +1,26 @@
 #include "GraphWidget.hpp"
+#include <QGraphicsTextItem>
 #include <QResizeEvent>
-#include <QBrush>
 #include <QPen>
-#include <QtMath>
+#include <QBrush>
+#include <cmath>
 
-GraphWidget::GraphWidget(QWidget *parent)
-    : QGraphicsView(parent), scene(new QGraphicsScene(this)), currentStep(0) {
+GraphWidget::GraphWidget(QWidget *parent) : QGraphicsView(parent), scene(new QGraphicsScene(this)) {
     setScene(scene);
     setRenderHint(QPainter::Antialiasing);
+    stepTimer.setInterval(300);
     connect(&stepTimer, &QTimer::timeout, this, &GraphWidget::showNextStep);
-
-    // start with light mode
-    setTheme(false);
-}
-
-void GraphWidget::setTheme(bool darkMode) {
-    isDarkMode = darkMode;
-    themeManager.applyTheme(this, darkMode ? ThemeManager::Dark : ThemeManager::Light);
-    scene->setBackgroundBrush(themeManager.backgroundColor());
-
-    // Reapply node/edge colors if graph already exists
-    for(auto &pair : nodeItems) pair.second->setBrush(themeManager.nodeColor());
-    for(auto &line : edgeItems) line->setPen(QPen(themeManager.edgeColor(),2));
-    for(auto &pair : nodeLabels) pair.second->setDefaultTextColor(themeManager.textColor());
 }
 
 void GraphWidget::setGraph(const Graph &graph) {
     currentGraph = graph;
-    clearGraph();
     drawGraph();
 }
 
-void GraphWidget::reset() {
-    clearGraph();
-    stepMessages.clear();
+void GraphWidget::animateSteps(const std::vector<std::string> &steps) {
+    stepMessages = steps;
     currentStep = 0;
+    stepTimer.start();
 }
 
 void GraphWidget::clearGraph() {
@@ -44,96 +30,114 @@ void GraphWidget::clearGraph() {
     edgeItems.clear();
 }
 
+void GraphWidget::reset() {
+    clearGraph();
+    stepMessages.clear();
+    currentStep = 0;
+    stepTimer.stop();
+}
+
+void GraphWidget::setTheme(bool darkMode) {
+    isDarkMode = darkMode;
+    setBackgroundBrush(themeManager.backgroundColor());
+
+    // recolor nodes + edges if already drawn
+    for (auto &pair : nodeItems) {
+        pair.second->setBrush(themeManager.nodeColor());
+    }
+    for (auto *edge : edgeItems) {
+        QPen pen(themeManager.nodeColor());
+        pen.setWidth(2);
+        edge->setPen(pen);
+    }
+}
+
 void GraphWidget::resizeEvent(QResizeEvent *event) {
     QGraphicsView::resizeEvent(event);
-    fitInView(scene->sceneRect(), Qt::KeepAspectRatio);
+    fitInView(scene->itemsBoundingRect(), Qt::KeepAspectRatio);
 }
 
 void GraphWidget::drawGraph() {
-    auto nodes = currentGraph.nodes();
-    int n = nodes.size();
+    clearGraph();
+
+    int n = currentGraph.nodes().size();
     if (n == 0) return;
 
-    double radius = qMin(width(), height()) / 2.5;
-    double cx = width() / 2.0;
-    double cy = height() / 2.0;
+    int radius = 150;
+    int cx = 0, cy = 0;
+    double angleStep = 2 * M_PI / n;
 
-    for (int i = 0; i < n; i++) {
-        double angle = (2 * M_PI * i) / n;
-        double x = cx + radius * qCos(angle);
-        double y = cy + radius * qSin(angle);
-        drawNode(nodes[i], x, y);
+    int i = 0;
+    for (auto &node : currentGraph.nodes()) {
+        double x = cx + radius * cos(i * angleStep);
+        double y = cy + radius * sin(i * angleStep);
+        drawNode(node, x, y);
+        i++;
     }
-
-    for (auto &node : nodes) {
-        for (auto &edge : currentGraph.neighbors(node)) {
-            drawEdge(edge);
-        }
+    for (auto &edge : currentGraph.edges()) {
+        drawEdge(edge);
     }
-
-    scene->setSceneRect(scene->itemsBoundingRect().adjusted(-50,-50,50,50));
+    fitInView(scene->itemsBoundingRect(), Qt::KeepAspectRatio);
 }
 
 void GraphWidget::drawNode(const std::string &id, double x, double y) {
-    double r = 30.0;
-    auto ellipse = scene->addEllipse(x-r/2, y-r/2, r, r,
-                                     QPen(Qt::black,2),
-                                     QBrush(themeManager.nodeColor()));
-    auto text = scene->addText(QString::fromStdString(id));
-    QRectF bounds = text->boundingRect();
-    text->setPos(x - bounds.width()/2, y - bounds.height()/2);
-    text->setDefaultTextColor(themeManager.textColor());
-
+    int r = 20;
+    auto *ellipse = scene->addEllipse(x - r, y - r, 2*r, 2*r,
+                                      QPen(Qt::black, 2),
+                                      QBrush(themeManager.nodeColor()));
     nodeItems[id] = ellipse;
-    nodeLabels[id] = text;
+
+    auto *label = scene->addText(QString::fromStdString(id));
+    label->setDefaultTextColor(isDarkMode ? Qt::white : Qt::black);
+    label->setPos(x - r/2, y - r/2);
+    nodeLabels[id] = label;
 }
 
 void GraphWidget::drawEdge(const Edge &edge) {
-    auto itFrom = nodeItems.find(edge.from);
-    auto itTo = nodeItems.find(edge.to);
-    if(itFrom==nodeItems.end() || itTo==nodeItems.end()) return;
+    if (!nodeItems.count(edge.from) || !nodeItems.count(edge.to)) return;
 
-    QPointF p1 = itFrom->second->rect().center() + itFrom->second->pos();
-    QPointF p2 = itTo->second->rect().center() + itTo->second->pos();
+    QPointF p1 = nodeItems[edge.from]->rect().center() + nodeItems[edge.from]->pos();
+    QPointF p2 = nodeItems[edge.to]->rect().center() + nodeItems[edge.to]->pos();
 
-    auto line = scene->addLine(QLineF(p1,p2), QPen(themeManager.edgeColor(),2));
+    auto *line = scene->addLine(QLineF(p1, p2), QPen(themeManager.nodeColor(), 2));
     edgeItems.push_back(line);
-
-    if(edge.weight) {
-        QPointF mid = (p1+p2)/2;
-        auto text = scene->addText(QString::number(*edge.weight));
-        QRectF bounds = text->boundingRect();
-        text->setPos(mid.x()-bounds.width()/2, mid.y()-bounds.height()/2);
-        text->setDefaultTextColor(themeManager.textColor());
-    }
-}
-
-void GraphWidget::animateSteps(const std::vector<std::string> &steps) {
-    stepMessages = steps;
-    currentStep = 0;
-    stepTimer.start(800);
 }
 
 void GraphWidget::showNextStep() {
-    if(currentStep >= stepMessages.size()) {
+    if (currentStep >= stepMessages.size()) {
         stepTimer.stop();
         return;
     }
 
     QString msg = QString::fromStdString(stepMessages[currentStep]);
 
-    // highlight node if mentioned
-    for(auto &pair: nodeItems) {
-        if(msg.contains(QString::fromStdString(pair.first))) {
-            pair.second->setBrush(themeManager.highlightColor());
+    // ---- Detect MST step ----
+    if (msg.startsWith("Edge added to MST")) {
+        // Parse nodes: "Edge added to MST: u - v (weight X)"
+        QStringList parts = msg.split(" ");
+        if (parts.size() >= 7) {
+            QString u = parts[4];
+            QString v = parts[6];
+
+            // highlight nodes
+            if (nodeItems.count(u.toStdString()))
+                nodeItems[u.toStdString()]->setBrush(QBrush(Qt::green));
+            if (nodeItems.count(v.toStdString()))
+                nodeItems[v.toStdString()]->setBrush(QBrush(Qt::green));
+
+            // highlight edge
+            for (auto *edge : edgeItems) {
+                if ((edge->line().p1() == nodeItems[u.toStdString()]->rect().center() + nodeItems[u.toStdString()]->pos() &&
+                     edge->line().p2() == nodeItems[v.toStdString()]->rect().center() + nodeItems[v.toStdString()]->pos()) ||
+                    (edge->line().p1() == nodeItems[v.toStdString()]->rect().center() + nodeItems[v.toStdString()]->pos() &&
+                     edge->line().p2() == nodeItems[u.toStdString()]->rect().center() + nodeItems[u.toStdString()]->pos())) {
+                    QPen pen(Qt::green);
+                    pen.setWidth(3);
+                    edge->setPen(pen);
+                }
+            }
         }
     }
-
-    // show step text
-    double yOffset = 20 + 20*currentStep;
-    auto textItem = scene->addText(msg);
-    textItem->setDefaultTextColor(themeManager.textColor());
-    textItem->setPos(scene->sceneRect().bottomLeft() + QPointF(10, -yOffset));
 
     currentStep++;
 }

@@ -14,6 +14,9 @@
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QWidget>
+#include <QTimer>
+
+#include <vector>
 
 #include "Graph.hpp"
 #include "GraphWidget.hpp"
@@ -41,8 +44,8 @@ private:
     ThemeManager *themeManager;
     QPushButton *themeToggleBtn;
     QPushButton *saveOutputBtn;
-    QPushButton *helpBtn;         // new
-    QPushButton *clearGraphBtn;   // new
+    QPushButton *helpBtn;         
+    QPushButton *clearGraphBtn;   
     bool isDarkMode;
 
     QLineEdit *nodeInput;
@@ -60,6 +63,16 @@ private:
     QPushButton *clearOutputBtn;
 
     QWidget* createControlPanel();
+
+    QTimer *stepTimer;
+    std::vector<std::string> currentSteps;
+    int currentStepIndex;
+
+    void startStepAnimation();
+    void showNextStep();
+    void appendHighlightedStep(const QString &text, bool isFinal = false);
+
+    bool isFirstRun = true;   // NEW FLAG
 };
 
 #endif // MAINWINDOW_HPP

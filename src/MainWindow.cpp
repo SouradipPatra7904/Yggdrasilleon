@@ -10,8 +10,10 @@
 #include <QFileDialog>
 #include <QTextStream>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QLabel>
 #include <QCoreApplication>
+#include <cstring>
 
 using StepCallback = std::function<void(const std::string&)>;
 
@@ -159,7 +161,7 @@ QWidget* MainWindow::createControlPanel() {
     clearOutputBtn = new QPushButton("Clear Output", outputGroup);
     connect(clearOutputBtn, &QPushButton::clicked, [this](){
         outputBox->clear();
-        graphWidget->reset();
+        // graphWidget->reset();
     });
     outLayout->addWidget(outputBox);
     outLayout->addWidget(clearOutputBtn);
@@ -197,30 +199,93 @@ void MainWindow::addEdge() {
 }
 
 void MainWindow::runAlgorithm() {
+    // Reset state
     outputBox->clear();
+
+    // First run, GraphWidget is not destroyed, but
+    // from the 2nd run onwards, the GraphWidget is destroyed and rebuilt.
+    if (!isFirstRun) {
+        graphWidget->reset();       // clear visuals
+        graphWidget->setGraph(graph); // redraw from Graph model
+    }
+
+    isFirstRun = false;
 
     std::string algo = algorithmBox->currentText().toStdString();
     std::string start = startNodeInput->text().toStdString();
     std::string end = endNodeInput->text().toStdString();
-    std::vector<std::string> steps;
+    currentSteps.clear();
+    currentStepIndex = 0;
 
-    StepCallback callback = [&](const std::string &msg){
-        steps.push_back(msg);
-        outputBox->append(QString::fromStdString(msg));
-        QCoreApplication::processEvents();
+    StepCallback callback = [&](const std::string &msg) {
+        currentSteps.push_back(msg);
     };
 
-    if (algo=="DFS") dfs(graph,start,callback);
-    else if (algo=="BFS") bfs(graph,start,callback);
-    else if (algo=="Dijkstra") dijkstra(graph,start,callback);
-    else if (algo=="Bellman-Ford") bellmanFord(graph,start,callback);
-    else if (algo=="Floyd-Warshall") floydWarshall(graph,callback);
-    else if (algo=="Prim's MST") primMST(graph,start,callback);
-    else if (algo=="Kruskal's MST") kruskalMST(graph,callback);
+    if (algo=="DFS") dfs(graph, start, callback);
+    else if (algo=="BFS") bfs(graph, start, callback);
+    else if (algo=="Dijkstra") dijkstra(graph, start, callback);
+    else if (algo=="Bellman-Ford") bellmanFord(graph, start, callback);
+    else if (algo=="Floyd-Warshall") floydWarshall(graph, callback);
+    else if (algo=="Prim's MST") primMST(graph, start, callback);
+    else if (algo=="Kruskal's MST") kruskalMST(graph, callback);
 
-    // Animate without clearing graph
-    graphWidget->animateSteps(steps);
+    // Start animation timer
+    startStepAnimation();
 }
+
+void MainWindow::startStepAnimation() {
+    if (stepTimer) {
+        stepTimer->stop();
+        delete stepTimer;
+    }
+    stepTimer = new QTimer(this);
+    connect(stepTimer, &QTimer::timeout, this, &MainWindow::showNextStep);
+    stepTimer->start(300); // 300ms delay
+}
+
+void MainWindow::showNextStep() {
+    if (currentStepIndex >= (int)currentSteps.size()) {
+        stepTimer->stop();
+        return;
+    }
+
+    bool isFinal = (currentStepIndex == (int)currentSteps.size() - 1);
+    QString stepText = QString::fromStdString(currentSteps[currentStepIndex]);
+
+    appendHighlightedStep(stepText, isFinal);
+    outputBox->verticalScrollBar()->setValue(outputBox->verticalScrollBar()->maximum());
+
+    // also animate in GraphWidget
+    graphWidget->animateSteps({ currentSteps[currentStepIndex] });
+
+    currentStepIndex++;
+}
+
+void MainWindow::appendHighlightedStep(const QString &text, bool isFinal) {
+    // Theme-aware highlight colors
+    QString bgColor, textColor;
+
+    if (isFinal) {
+        bgColor = isDarkMode ? "#2e7d32" : "#c8f7c5";   // green shades
+        textColor = isDarkMode ? "#e8f5e9" : "#1b5e20"; // light green text vs dark green text
+    } else {
+        bgColor = isDarkMode ? "#bfa93a" : "#fef7c0";   // yellow shades
+        textColor = isDarkMode ? "#000000" : "#000000"; // dark vs brownish for contrast
+    }
+
+    QString styled = QString(
+        "<div style='background-color:%1; color:%2; padding:8px; margin:4px; "
+        "border-radius:6px; font-size:14px;'>%3</div><br/>")
+        .arg(bgColor)
+        .arg(textColor)
+        .arg(text.toHtmlEscaped());
+
+    outputBox->moveCursor(QTextCursor::End);
+    outputBox->insertHtml(styled);
+    outputBox->moveCursor(QTextCursor::End);
+}
+
+
 
 void MainWindow::toggleTheme() {
     isDarkMode = !isDarkMode;
@@ -231,9 +296,19 @@ void MainWindow::toggleTheme() {
 // Update Start/End enable for MST
 void MainWindow::updateAlgorithmControls(int index) {
     QString algo = algorithmBox->itemText(index);
-    bool isMST = algo.contains("MST");
-    startNodeInput->setDisabled(isMST);
-    endNodeInput->setDisabled(isMST);
+
+    //bool isMST = algo.contains("MST");
+    //startNodeInput->setDisabled(isMST);
+    //endNodeInput->setDisabled(isMST);
+
+    if(algo == "Prim's MST"){
+        endNodeInput->setDisabled(true);
+    }
+
+    if(algo == "Kruskal's MST"){
+        startNodeInput->setDisabled(true);
+        endNodeInput->setDisabled(true);
+    }
 }
 
 // Clear graph manually

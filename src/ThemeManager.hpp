@@ -34,6 +34,8 @@ private:
     QColor lightButton = QColor("#0ca678");
     QColor lightButtonText = QColor("#000000");
 
+    QColor highlightColorLight = QColor("#f2ff00");
+
     QColor darkNode    = QColor("#0ca678"); // tealish
     QColor darkEdge    = QColor(Qt::darkGray);
     QColor darkText    = QColor(Qt::white);
@@ -42,6 +44,9 @@ private:
 
     QColor darkButton = QColor("#056d4e");
     QColor darkButtonText = QColor("#ffffff");
+
+    QColor highlightColorDark = QColor("#ff6200");
+
 
 
 };

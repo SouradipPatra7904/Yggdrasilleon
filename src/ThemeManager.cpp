@@ -45,10 +45,6 @@ QColor ThemeManager::textColor() const {
     return (currentMode == Dark) ? darkText : lightText;
 }
 
-QColor ThemeManager::highlightColor() const {
-    return (currentMode == Dark) ? darkHighlight : lightHighlight;
-}
-
 QColor ThemeManager::backgroundColor() const {
     return (currentMode == Dark) ? darkBackground : lightBackground;
 }
@@ -57,3 +53,9 @@ QColor ThemeManager::buttonColor() const
 {
     return (currentMode == Dark ? darkButton : lightButton);
 }
+
+QColor ThemeManager::highlightColor() const {
+    return (currentMode == Dark ? highlightColorDark : highlightColorLight);
+    }
+
+
