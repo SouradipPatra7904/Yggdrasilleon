@@ -26,4 +26,7 @@ void floydWarshall(const Graph &graph, StepCallback callback);
 void primMST(const Graph &graph, const std::string &start, StepCallback callback);
 void kruskalMST(const Graph &graph, StepCallback callback);
 
+// ---- Cycle detection entry points ----
+    void detectCycles(const Graph &graph, std::function<void(const std::string&)> callback);
+
 #endif // ALGORITHMS_HPP

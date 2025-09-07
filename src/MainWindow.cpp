@@ -138,7 +138,9 @@ QWidget* MainWindow::createControlPanel() {
     QGroupBox *algoBox = new QGroupBox("Algorithm", panel);
     QFormLayout *algoLayout = new QFormLayout(algoBox);
     algorithmBox = new QComboBox(algoBox);
-    algorithmBox->addItems({"DFS", "BFS","Dijkstra","Bellman-Ford","Floyd-Warshall","Prim's MST","Kruskal's MST"});
+
+    algorithmBox->addItems({"DFS", "BFS", "Detect Cycles","Dijkstra","Bellman-Ford","Floyd-Warshall","Prim's MST","Kruskal's MST"});
+
     startNodeInput = new QLineEdit(algoBox);
     endNodeInput = new QLineEdit(algoBox);
     runBtn = new QPushButton("Run", algoBox);
@@ -146,7 +148,7 @@ QWidget* MainWindow::createControlPanel() {
 
     algoLayout->addRow("Algorithm:", algorithmBox);
     algoLayout->addRow("Start Node:", startNodeInput);
-    algoLayout->addRow("End Node:", endNodeInput);
+    algoLayout->addRow("Goal Node:", endNodeInput);
     algoLayout->addRow("", runBtn);
 
     // Disable Start/End automatically for MST
@@ -212,8 +214,23 @@ void MainWindow::runAlgorithm() {
     isFirstRun = false;
 
     std::string algo = algorithmBox->currentText().toStdString();
+
     std::string start = startNodeInput->text().toStdString();
     std::string end = endNodeInput->text().toStdString();
+
+    // BFS, DFS, Shortest Path Algorithms must have a start and goal nodes.
+    if(algo == "BFS" || algo == "DFS"){
+        if (start.empty() || end.empty()) {
+            QMessageBox::warning(this,"Invalid Input","Start/End cannot be empty."); 
+            return; 
+        }
+    }
+    // Prim's Algorithm must take the starting node as input for it's greedy approach.
+    if(algo == "Prim's MST" && start.empty()){
+        QMessageBox::warning(this,"Invalid Input","Start cannot be empty."); 
+        return;
+    }
+
     currentSteps.clear();
     currentStepIndex = 0;
 
@@ -228,6 +245,7 @@ void MainWindow::runAlgorithm() {
     else if (algo=="Floyd-Warshall") floydWarshall(graph, callback);
     else if (algo=="Prim's MST") primMST(graph, start, callback);
     else if (algo=="Kruskal's MST") kruskalMST(graph, callback);
+    else if (algo == "Detect Cycles") detectCycles(graph, callback);
 
     // Start animation timer
     startStepAnimation();
@@ -291,6 +309,7 @@ void MainWindow::toggleTheme() {
     isDarkMode = !isDarkMode;
     themeManager->applyTheme(this, isDarkMode ? ThemeManager::Dark : ThemeManager::Light);
     graphWidget->setTheme(isDarkMode);
+    
 }
 
 // Update Start/End enable for MST
@@ -306,6 +325,11 @@ void MainWindow::updateAlgorithmControls(int index) {
     }
 
     if(algo == "Kruskal's MST"){
+        startNodeInput->setDisabled(true);
+        endNodeInput->setDisabled(true);
+    }
+
+    if(algo.contains("Cycle")){
         startNodeInput->setDisabled(true);
         endNodeInput->setDisabled(true);
     }

@@ -4,6 +4,9 @@
 #include <map>
 #include <sstream>
 
+#include <unordered_set>
+#include <stack>
+
 // ------------------ DFS ------------------
 void dfs(const Graph &graph, const std::string &start, StepCallback callback) {
     std::unordered_set<std::string> visited;
@@ -221,4 +224,81 @@ void kruskalMST(const Graph &graph, StepCallback callback) {
         first = false;
     }
     callback(oss.str());
+}
+
+
+// ---------- Cycle Detection algorithms
+
+
+// Detect cycles (both directed & undirected)
+void detectCycles(const Graph& graph, std::function<void(const std::string&)> callback) {
+    std::unordered_set<std::string> visited;
+    std::unordered_set<std::string> recursionStack;
+    std::set<std::pair<std::string, std::string>> reported; // avoid duplicate cycle edges
+
+    auto dfsDirected = [&](auto&& self, const std::string& node, std::vector<std::string>& path) -> bool {
+        visited.insert(node);
+        recursionStack.insert(node);
+        path.push_back(node);
+
+        for (const auto& edge : graph.neighbors(node)) {
+            const std::string& neighbor = edge.to;
+
+            if (recursionStack.count(neighbor)) {
+                // Cycle detected
+                auto it = std::find(path.begin(), path.end(), neighbor);
+                if (it != path.end()) {
+                    std::string cycle = "Cycle detected (Directed): ";
+                    for (; it != path.end(); ++it) cycle += *it + " -> ";
+                    cycle += neighbor;
+                    callback(cycle);
+                }
+                return true;
+            } else if (!visited.count(neighbor)) {
+                if (self(self, neighbor, path)) return true;
+            }
+        }
+
+        recursionStack.erase(node);
+        path.pop_back();
+        return false;
+    };
+
+    auto dfsUndirected = [&](auto&& self, const std::string& node, const std::string& parent) -> bool {
+        visited.insert(node);
+
+        for (const auto& edge : graph.neighbors(node)) {
+            const std::string& neighbor = edge.to;
+
+            if (!visited.count(neighbor)) {
+                if (self(self, neighbor, node)) return true;
+            } else if (neighbor != parent) {
+                // Avoid duplicate reporting
+                auto key = std::minmax(node, neighbor);
+                if (!reported.count(key)) {
+                    callback("Cycle detected (Undirected): " + node + " <-> " + neighbor);
+                    reported.insert(key);
+                }
+            }
+        }
+        return false;
+    };
+
+    // Run both checks
+    visited.clear();
+    for (const auto& node : graph.nodes()) {
+        if (!visited.count(node)) {
+            std::vector<std::string> path;
+            dfsDirected(dfsDirected, node, path);
+        }
+    }
+
+    visited.clear();
+    for (const auto& node : graph.nodes()) {
+        if (!visited.count(node)) {
+            dfsUndirected(dfsUndirected, node, "");
+        }
+    }
+
+    if (callback) callback("Cycle detection completed.");
 }

@@ -19,7 +19,7 @@ public:
     QColor edgeColor() const;
     QColor textColor() const;
     QColor highlightColor() const;
-    QColor backgroundColor() const;
+    QColor backgroundColor(bool isDarkMode) const;
     QColor buttonColor() const;
 
 private:

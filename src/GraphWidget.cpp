@@ -8,6 +8,7 @@
 GraphWidget::GraphWidget(QWidget *parent) : QGraphicsView(parent), scene(new QGraphicsScene(this)) {
     setScene(scene);
     setRenderHint(QPainter::Antialiasing);
+    setTheme(isDarkMode);
     stepTimer.setInterval(300);
     connect(&stepTimer, &QTimer::timeout, this, &GraphWidget::showNextStep);
 }
@@ -39,16 +40,22 @@ void GraphWidget::reset() {
 
 void GraphWidget::setTheme(bool darkMode) {
     isDarkMode = darkMode;
-    setBackgroundBrush(themeManager.backgroundColor());
 
-    // recolor nodes + edges if already drawn
+    // 🔹 Apply background based on theme
+    scene->setBackgroundBrush(themeManager.backgroundColor(isDarkMode));
+
+    // 🔹 Recolor nodes, edges, and labels
     for (auto &pair : nodeItems) {
         pair.second->setBrush(themeManager.nodeColor());
     }
     for (auto *edge : edgeItems) {
-        QPen pen(themeManager.nodeColor());
+        QPen pen(themeManager.edgeColor());
         pen.setWidth(2);
         edge->setPen(pen);
+        edge->setZValue(-1); // keep edges behind nodes
+    }
+    for (auto &pair : nodeLabels) {
+        pair.second->setDefaultTextColor(themeManager.textColor());
     }
 }
 
@@ -88,7 +95,7 @@ void GraphWidget::drawNode(const std::string &id, double x, double y) {
     nodeItems[id] = ellipse;
 
     auto *label = scene->addText(QString::fromStdString(id));
-    label->setDefaultTextColor(isDarkMode ? Qt::white : Qt::black);
+    label->setDefaultTextColor(themeManager.textColor());
     label->setPos(x - r/2, y - r/2);
     nodeLabels[id] = label;
 }
@@ -99,7 +106,8 @@ void GraphWidget::drawEdge(const Edge &edge) {
     QPointF p1 = nodeItems[edge.from]->rect().center() + nodeItems[edge.from]->pos();
     QPointF p2 = nodeItems[edge.to]->rect().center() + nodeItems[edge.to]->pos();
 
-    auto *line = scene->addLine(QLineF(p1, p2), QPen(themeManager.nodeColor(), 2));
+    auto *line = scene->addLine(QLineF(p1, p2), QPen(themeManager.edgeColor(), 2));
+    line->setZValue(-1); // 🔹 ensure edges are drawn behind nodes
     edgeItems.push_back(line);
 }
 
@@ -112,8 +120,8 @@ void GraphWidget::showNextStep() {
     QString msg = QString::fromStdString(stepMessages[currentStep]);
 
     // ---- Detect MST step ----
+
     if (msg.startsWith("Edge added to MST")) {
-        // Parse nodes: "Edge added to MST: u - v (weight X)"
         QStringList parts = msg.split(" ");
         if (parts.size() >= 7) {
             QString u = parts[4];
@@ -121,17 +129,57 @@ void GraphWidget::showNextStep() {
 
             // highlight nodes
             if (nodeItems.count(u.toStdString()))
-                nodeItems[u.toStdString()]->setBrush(QBrush(Qt::green));
+                nodeItems[u.toStdString()]->setBrush(QBrush(themeManager.highlightColor()));
             if (nodeItems.count(v.toStdString()))
-                nodeItems[v.toStdString()]->setBrush(QBrush(Qt::green));
+                nodeItems[v.toStdString()]->setBrush(QBrush(themeManager.highlightColor()));
 
-            // highlight edge
+            // highlight edge between u and v
+            QPointF p1 = nodeItems[u.toStdString()]->rect().center() + nodeItems[u.toStdString()]->pos();
+            QPointF p2 = nodeItems[v.toStdString()]->rect().center() + nodeItems[v.toStdString()]->pos();
+
             for (auto *edge : edgeItems) {
-                if ((edge->line().p1() == nodeItems[u.toStdString()]->rect().center() + nodeItems[u.toStdString()]->pos() &&
-                     edge->line().p2() == nodeItems[v.toStdString()]->rect().center() + nodeItems[v.toStdString()]->pos()) ||
-                    (edge->line().p1() == nodeItems[v.toStdString()]->rect().center() + nodeItems[v.toStdString()]->pos() &&
-                     edge->line().p2() == nodeItems[u.toStdString()]->rect().center() + nodeItems[u.toStdString()]->pos())) {
-                    QPen pen(Qt::green);
+                QLineF line = edge->line();
+                if ((line.p1() == p1 && line.p2() == p2) || (line.p1() == p2 && line.p2() == p1)) {
+                    QPen pen(themeManager.highlightColor());
+                    pen.setWidth(3);
+                    edge->setPen(pen);
+                }
+            }
+        }
+    }
+
+    // ---- Detect Cycle step ----
+
+    else if (msg.startsWith("Cycle detected")) {
+        // Extract the nodes from message
+        QStringList tokens;
+        if (msg.contains("->"))
+            tokens = msg.section(":", 1).split("->", Qt::SkipEmptyParts);
+        else if (msg.contains("<->"))
+            tokens = msg.section(":", 1).split("<->", Qt::SkipEmptyParts);
+
+        // Trim spaces
+        for (QString &t : tokens) t = t.trimmed();
+
+        // highlight cycle nodes
+        for (const QString &n : tokens) {
+            if (nodeItems.count(n.toStdString())) {
+                nodeItems[n.toStdString()]->setBrush(QBrush(Qt::red)); // cycle color
+            }
+        }
+
+        // highlight cycle edges
+        for (int i = 0; i < tokens.size() - 1; i++) {
+            QString u = tokens[i];
+            QString v = tokens[i + 1];
+
+            QPointF p1 = nodeItems[u.toStdString()]->rect().center() + nodeItems[u.toStdString()]->pos();
+            QPointF p2 = nodeItems[v.toStdString()]->rect().center() + nodeItems[v.toStdString()]->pos();
+
+            for (auto *edge : edgeItems) {
+                QLineF line = edge->line();
+                if ((line.p1() == p1 && line.p2() == p2) || (line.p1() == p2 && line.p2() == p1)) {
+                    QPen pen(Qt::red);
                     pen.setWidth(3);
                     edge->setPen(pen);
                 }
