@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Yggdrasilleon
+Comment=Interactive Graph Algorithm Visualizer
+Exec=Yggdrasilleon
+Icon=Yggdrasilleon
+Terminal=false
+Categories=Education;Development;Utility;
+Keywords=Graph;Algorithm;Visualization;DFS;BFS;Dijkstra;Bellman-Ford;Floyd-Warshall;Prim;Kruskal;

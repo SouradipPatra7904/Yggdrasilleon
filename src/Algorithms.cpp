@@ -70,50 +70,140 @@ void dijkstra(const Graph &graph, const std::string &start, StepCallback callbac
     }
 }
 
-// ------------------ Bellman-Ford ------------------
+// ------------------ Bellman-Ford Implementation :
 void bellmanFord(const Graph &graph, const std::string &start, StepCallback callback) {
-    std::unordered_map<std::string, int> dist;
-    for (auto &node : graph.nodes()) dist[node] = std::numeric_limits<int>::max();
+    using ll = long long;
+    const ll INF = std::numeric_limits<ll>::max() / 4;
+
+    std::unordered_map<std::string, ll> dist;
+    std::unordered_map<std::string, std::string> prev; // parent tracker
+
+    for (auto &node : graph.nodes()) dist[node] = INF;
     dist[start] = 0;
+
     callback("Starting Bellman-Ford from " + start);
 
-    int N = graph.nodes().size();
-    for (int i = 0; i < N-1; ++i) {
+    int N = (int)graph.nodes().size();
+    for (int iter = 0; iter < N - 1; ++iter) {
+        bool changed = false;
         for (auto &edge : graph.edges()) {
-            int w = edge.weight.value_or(1);
-            if (dist[edge.from] != std::numeric_limits<int>::max() &&
-                dist[edge.to] > dist[edge.from] + w) {
+            ll w = (edge.weight) ? static_cast<ll>(*edge.weight) : 1LL;
+            if (dist[edge.from] != INF && dist[edge.to] > dist[edge.from] + w) {
                 dist[edge.to] = dist[edge.from] + w;
-                callback("Updated " + edge.to + " to " + std::to_string(dist[edge.to]));
+                prev[edge.to] = edge.from; // track path
+
+                // emit step for GUI highlighting: entire path from start to current
+                std::string pathNode = edge.to;
+                std::string pathStr = pathNode;
+                while (prev.count(pathNode)) {
+                    pathNode = prev[pathNode];
+                    pathStr = pathNode + " -> " + pathStr;
+                }
+                callback("Path: " + pathStr + " = " + std::to_string(dist[edge.to]));
+
+                // highlight edge
+                callback("Edge update highlight: " + edge.from + " -> " + edge.to);
+
+                changed = true;
             }
         }
+        if (!changed) break;
     }
-}
 
-// ------------------ Floyd-Warshall ------------------
-void floydWarshall(const Graph &graph, StepCallback callback) {
-    auto nodes = graph.nodes();
-    std::unordered_map<std::string, std::unordered_map<std::string, int>> dist;
-    for (auto &u : nodes) {
-        for (auto &v : nodes) {
-            dist[u][v] = (u == v) ? 0 : std::numeric_limits<int>::max();
+    // Detect negative cycles
+    for (auto &edge : graph.edges()) {
+        ll w = (edge.weight) ? static_cast<ll>(*edge.weight) : 1LL;
+        if (dist[edge.from] != INF && dist[edge.to] > dist[edge.from] + w) {
+            callback("❌ Negative weight cycle detected! Aborting visualization.");
+            callback("RESET_COLORS");
+            return;
         }
     }
-    for (auto &edge : graph.edges()) {
-        dist[edge.from][edge.to] = edge.weight.value_or(1);
+
+    // Highlight all shortest paths from start to reachable nodes
+    for (auto &node : graph.nodes()) {
+        if (node == start || dist[node] == INF) continue;
+
+        std::string cur = node;
+        while (prev.count(cur)) {
+            std::string p = prev[cur];
+            callback("Edge update highlight: " + p + " -> " + cur);
+            cur = p;
+        }
+    }
+
+    callback("✅ Bellman-Ford completed successfully!");
+}
+
+
+//------------------- Floyd-Warshall Implementation
+void floydWarshall(const Graph &graph, StepCallback callback) {
+    using ll = long long;
+    const ll INF = std::numeric_limits<ll>::max() / 4;
+
+    auto nodes = graph.nodes();
+    int n = (int)nodes.size();
+    if (n == 0) { callback("Floyd-Warshall: graph has no nodes."); return; }
+
+    std::unordered_map<std::string,int> idx;
+    for (int i = 0; i < n; ++i) idx[nodes[i]] = i;
+
+    std::vector<std::vector<ll>> dist(n, std::vector<ll>(n, INF));
+    std::vector<std::vector<int>> next(n, std::vector<int>(n, -1)); // next-hop for path reconstruction
+
+    for (int i = 0; i < n; ++i) dist[i][i] = 0;
+
+    // insert edges
+    for (auto &e : graph.edges()) {
+        int u = idx[e.from], v = idx[e.to];
+        ll w = (e.weight) ? static_cast<ll>(*e.weight) : 1LL;
+        if (dist[u][v] > w) { dist[u][v] = w; next[u][v] = v; }
+        if (!e.directed && dist[v][u] > w) { dist[v][u] = w; next[v][u] = u; }
     }
 
     callback("Starting Floyd-Warshall");
-    for (auto &k : nodes)
-        for (auto &i : nodes)
-            for (auto &j : nodes) {
-                if (dist[i][k] != std::numeric_limits<int>::max() &&
-                    dist[k][j] != std::numeric_limits<int>::max() &&
-                    dist[i][j] > dist[i][k] + dist[k][j]) {
+
+    // main triple loop
+    for (int k = 0; k < n; ++k) {
+        for (int i = 0; i < n; ++i) {
+            if (dist[i][k] == INF) continue;
+            for (int j = 0; j < n; ++j) {
+                if (dist[k][j] == INF) continue;
+                if (dist[i][j] > dist[i][k] + dist[k][j]) {
                     dist[i][j] = dist[i][k] + dist[k][j];
-                    callback("Updated distance: " + i + " -> " + j + " = " + std::to_string(dist[i][j]));
+                    next[i][j] = next[i][k];
+
+                    // emit step for GUI
+                    callback("Edge update highlight: " + nodes[i] + " -> " + nodes[j]);
                 }
             }
+        }
+    }
+
+    // detect negative cycles
+    for (int i = 0; i < n; ++i) {
+        if (dist[i][i] < 0) {
+            callback("❌ Negative weight cycle detected! Aborting visualization.");
+            callback("RESET_COLORS");
+            return;
+        }
+    }
+
+    // highlight full shortest paths for all pairs
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            if (i == j || next[i][j] == -1) continue;
+
+            int u = i;
+            while (u != j) {
+                int v = next[u][j];
+                callback("Edge update highlight: " + nodes[u] + " -> " + nodes[v]);
+                u = v;
+            }
+        }
+    }
+
+    callback("✅ Floyd-Warshall completed successfully!");
 }
 
 // ------------------ Prim's MST ------------------

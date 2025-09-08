@@ -15,12 +15,12 @@ public:
     void applyTheme(QWidget *widget, Mode mode);
 
     // Getters for GraphWidget colors
-    QColor nodeColor() const;
-    QColor edgeColor() const;
-    QColor textColor() const;
-    QColor highlightColor() const;
+    QColor nodeColor(bool isDarkMode) const;
+    QColor edgeColor(bool isDarkMode) const;
+    QColor textColor(bool isDarkMode) const;
+    QColor highlightColor(bool isDarkMode) const;
     QColor backgroundColor(bool isDarkMode) const;
-    QColor buttonColor() const;
+    QColor buttonColor(bool isDarkMode) const;
 
 private:
     Mode currentMode = Light;

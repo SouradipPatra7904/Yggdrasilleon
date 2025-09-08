@@ -1,0 +1,3 @@
+build/Yggdrasilleon usr/bin/
+resources/Yggdrasilleon.desktop usr/share/applications/
+resources/Yggdrasilleon.png usr/share/icons/hicolor/256x256/apps/Yggdrasilleon.png

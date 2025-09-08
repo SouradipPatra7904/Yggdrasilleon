@@ -1,0 +1,9 @@
+yggdrasilleon (1.0-1) stable; urgency=medium
+
+  * Initial release of Yggdrasilleon Graph Algorithm Visualizer.
+  * Features:
+    - Visualization of BFS, DFS, Dijkstra, Bellman-Ford, Floyd-Warshall, Prim, Kruskal.
+    - Step-by-step simulation and color-coded graph highlighting.
+    - Built-in MAN-PAGE style help section with algorithm descriptions.
+
+ -- Souradip Patra <spectralphoenix.dev@gmail.com>  Mon, 08 Sep 2025 22:00:00 +0530

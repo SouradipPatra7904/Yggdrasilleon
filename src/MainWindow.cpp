@@ -1,7 +1,9 @@
 #include "MainWindow.hpp"
 #include "ThemeManager.hpp"
 #include "Algorithms.hpp"
+#include "ManPageTexts.hpp"
 
+#include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -30,7 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
     splitter->setStretchFactor(1, 2);
     setCentralWidget(splitter);
 
-    setWindowTitle("Yggdrasill - World Tree Graph Engine");
+    setWindowTitle("Yggdrasilleon - Graph Algorithm Visualizer");
     resize(1200, 800);
 
     // Set initial Light theme
@@ -270,8 +272,18 @@ void MainWindow::showNextStep() {
     bool isFinal = (currentStepIndex == (int)currentSteps.size() - 1);
     QString stepText = QString::fromStdString(currentSteps[currentStepIndex]);
 
-    appendHighlightedStep(stepText, isFinal);
-    outputBox->verticalScrollBar()->setValue(outputBox->verticalScrollBar()->maximum());
+    // Special internal control to revert visuals
+    bool isResetSignal = (stepText == "RESET_COLORS");
+
+     if (!isResetSignal) {
+        appendHighlightedStep(stepText, isFinal);
+        outputBox->verticalScrollBar()->setValue(outputBox->verticalScrollBar()->maximum());
+    }
+
+    // This shit below was causing double outputs, as the above condition check already does the same
+    // So the shit below is not needed 😍
+    //appendHighlightedStep(stepText, isFinal);
+    //outputBox->verticalScrollBar()->setValue(outputBox->verticalScrollBar()->maximum());
 
     // also animate in GraphWidget
     graphWidget->animateSteps({ currentSteps[currentStepIndex] });
@@ -316,6 +328,10 @@ void MainWindow::toggleTheme() {
 void MainWindow::updateAlgorithmControls(int index) {
     QString algo = algorithmBox->itemText(index);
 
+    // First, enable both input fileds by default
+    startNodeInput->setEnabled(true);
+    endNodeInput->setEnabled(true);
+
     //bool isMST = algo.contains("MST");
     //startNodeInput->setDisabled(isMST);
     //endNodeInput->setDisabled(isMST);
@@ -345,71 +361,91 @@ void MainWindow::clearGraph() {
 // Show Help window
 void MainWindow::showHelp() {
     QDialog *helpDialog = new QDialog(this);
-    helpDialog->setWindowTitle("Yggdrasill Help & Documentation");
+    helpDialog->setWindowTitle("Yggdrasilleon Help & Documentation");
     helpDialog->resize(900, 750);
 
-    QVBoxLayout *layout = new QVBoxLayout(helpDialog);
-    QLabel *label = new QLabel(helpDialog);
+    QVBoxLayout *mainLayout = new QVBoxLayout(helpDialog);
 
-    label->setWordWrap(true);
-    label->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-    label->setTextFormat(Qt::RichText);
-    label->setOpenExternalLinks(true);
+    // Top navigation
+    QHBoxLayout *navLayout = new QHBoxLayout();
+    QPushButton *prevBtn = new QPushButton("⬅", helpDialog);
+    QLabel *pageLabel = new QLabel(helpDialog);
+    QPushButton *nextBtn = new QPushButton("➡", helpDialog);
 
-    label->setText(
-    "<div style='padding:15px; font-family:Segoe UI, sans-serif; font-size:12pt;'>"
+    navLayout->addWidget(prevBtn);
+    navLayout->addStretch();
+    navLayout->addWidget(pageLabel);
+    navLayout->addStretch();
+    navLayout->addWidget(nextBtn);
+    mainLayout->addLayout(navLayout);
 
-    "<h2 style='color:#4a90e2; text-align:center;'>🌳 Yggdrasilleon Graph Algorithm Visualizer – User Guide 🌳</h2>"
-    "<p><b>Yggdrasill</b> is an interactive graph engine for building, visualizing, and simulating algorithms on graphs. "
-    "Use the controls on the left to create and manipulate your graph, then run algorithms to see step-by-step execution.</p>"
+    // Stacked widget for pages
+    QStackedWidget *stack = new QStackedWidget(helpDialog);
 
-    "<h3 style='color:#2d8659;'>⚡ Core Features</h3>"
-    "<ul>"
-    "<li>➕ <b>Add Node</b> – Enter a node ID and insert it into the graph.</li>"
-    "<li>🔗 <b>Add Edge</b> – Provide From/To nodes, optional weight, and direction.</li>"
-    "<li>❌ <b>Delete Edge</b> – Remove an edge between two nodes.</li>"
-    "<li>🧹 <b>Clear Graph</b> – Reset the entire graph.</li>"
-    "<li>📝 <b>Clear Output</b> – Clear only the algorithm results.</li>"
-    "</ul>"
+    auto makePage = [&](const QString &htmlContent) -> QWidget* {
+        QWidget *page = new QWidget(helpDialog);
+        QVBoxLayout *layout = new QVBoxLayout(page);
 
-    "<h3 style='color:#2d8659;'>🧮 Algorithms Supported</h3>"
-    "<ul>"
-    "<li>🔍 <b>DFS</b> (Depth-First Search)</li>"
-    "<li>🔎 <b>BFS</b> (Breadth-First Search)</li>"
-    "<li>🛣️ <b>Dijkstra</b> (Shortest Path)</li>"
-    "<li>⚖️ <b>Bellman-Ford</b> (Shortest Path with negatives)</li>"
-    "<li>🌐 <b>Floyd-Warshall</b> (All-Pairs Shortest Paths)</li>"
-    "<li>🌲 <b>Prim's Algorithm to find Minimal Spanning Tree </b></li>"
-    "<li>🌳 <b>Kruskal's Algorithm to find Minimal Spanning Tree </b></li>"
-    "</ul>"
-    "<p style='color:#cc6600;'><i>Note: Start/End node fields are disabled for MST algorithms.</i></p>"
+        QLabel *label = new QLabel(page);
+        label->setWordWrap(true);
+        label->setTextFormat(Qt::RichText);
 
-    "<h3 style='color:#2d8659;'>🎨 Visualization & Output</h3>"
-    "<ul>"
-    "<li>✨ Step-by-step simulation with node/edge highlighting.</li>"
-    "<li>📜 Output box shows traversal, paths, or MST steps.</li>"
-    "<li>🔄 Graph updates automatically as you edit it.</li>"
-    "</ul>"
+        // Theme-aware colors
+        QString bgColor = isDarkMode ? "#121212" : "#ffffff";
+        QString textColor = isDarkMode ? "#e0e0e0" : "#212121";
+        QString headerColor = isDarkMode ? "#90caf9" : "#1565c0";
 
-    "<h3 style='color:#2d8659;'>🛠️ Utility Features</h3>"
-    "<ul>"
-    "<li>💾 <b>Save Output</b> – Export graph + results to file.</li>"
-    "<li>🌞🌙 <b>Toggle Theme</b> – Switch between Light and Dark modes.</li>"
-    "<li>❔ <b>Help</b> – Opens this guide.</li>"
-    "</ul>"
+        QString styledHtml =
+            "<div style='background-color:" + bgColor + "; color:" + textColor +
+            "; padding:15px; font-family:Segoe UI, sans-serif; font-size:12pt;'>"
+            + htmlContent +
+            "</div>";
 
-    "<h3 style='color:#2d8659;'>👨‍💻 Developer Info</h3>"
-    "<p><b>Created by:</b> <span style='color:#4a90e2;'>Souradip Patra</span><br>"
-    "Project: <i>Yggdrasilleon – Graph Algorithm Visualizer </i></p>"
+        label->setText(styledHtml);
 
-    "</div>"
-);
+        QScrollArea *scroll = new QScrollArea(page);
+        scroll->setWidget(label);
+        scroll->setWidgetResizable(true);
 
-    QScrollArea *scroll = new QScrollArea(helpDialog);
-    scroll->setWidget(label);
-    scroll->setWidgetResizable(true);
+        layout->addWidget(scroll);
+        return page;
+    };
 
-    layout->addWidget(scroll);
-    helpDialog->setLayout(layout);
+    ManPageTexts new_page_texts;
+    // -------- Page 1: Overview + Features --------
+    stack->addWidget(makePage(new_page_texts.page_One_Text));
+
+    // -------- Page 2: Algorithm Descriptions --------
+    stack->addWidget(makePage(new_page_texts.page_Two_Text));
+
+    // -------- Page 3: Common Graph Terms --------
+    stack->addWidget(makePage(new_page_texts.page_Three_Text));
+
+    // -------------------- "How To" Page -----------------------------
+    stack->addWidget(makePage(new_page_texts.page_Four_Text));
+
+    mainLayout->addWidget(stack);
+
+    // Initialize page display
+    int currentPage = 0;
+    auto updatePageLabel = [&]() {
+        pageLabel->setText(QString("Page %1 / %2").arg(currentPage + 1).arg(stack->count()));
+    };
+    updatePageLabel();
+
+    // Navigation buttons
+    connect(prevBtn, &QPushButton::clicked, [&, stack]() {
+        if (currentPage > 0) currentPage--;
+        stack->setCurrentIndex(currentPage);
+        updatePageLabel();
+    });
+    connect(nextBtn, &QPushButton::clicked, [&, stack]() {
+        if (currentPage < stack->count() - 1) currentPage++;
+        stack->setCurrentIndex(currentPage);
+        updatePageLabel();
+    });
+
+    helpDialog->setLayout(mainLayout);
     helpDialog->exec();
 }
+

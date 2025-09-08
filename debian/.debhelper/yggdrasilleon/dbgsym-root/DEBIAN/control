@@ -1,0 +1,13 @@
+Package: yggdrasilleon-dbgsym
+Package-Type: ddeb
+Source: yggdrasilleon
+Version: 1.0-1
+Auto-Built-Package: debug-symbols
+Architecture: amd64
+Maintainer: Souradip Patra spectralphoenix.dev@gmail.com
+Installed-Size: 481
+Depends: yggdrasilleon (= 1.0-1)
+Section: debug
+Priority: optional
+Description: debug symbols for yggdrasilleon
+Build-Ids: b5d1078b2c2b690063d75f5d2f3b378e35faeac9

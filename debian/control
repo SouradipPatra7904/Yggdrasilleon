@@ -1,0 +1,15 @@
+Source: yggdrasilleon
+Section: utils
+Priority: optional
+Maintainer: Souradip Patra spectralphoenix.dev@gmail.com
+Build-Depends: cmake, qtbase5-dev, debhelper (>= 9)
+Standards-Version: 4.5.0
+Rules-Requires-Root: no
+
+Package: yggdrasilleon
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Yggdrasilleon - Graph Algorithm Visualizer
+ An interactive Qt-based visualizer for graph algorithms
+ including DFS, BFS, Dijkstra, Bellman-Ford, Floyd-Warshall,
+ Prim’s and Kruskal’s MST, and cycle detection.

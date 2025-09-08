@@ -33,29 +33,29 @@ void ThemeManager::applyTheme(QWidget *widget, Mode mode) {
 }
 
 // ---------- Getters ----------
-QColor ThemeManager::nodeColor() const {
-    return (currentMode == Dark) ? darkNode : lightNode;
+QColor ThemeManager::nodeColor(bool isDarkMode) const {
+    return (isDarkMode) ? darkNode : lightNode;
 }
 
-QColor ThemeManager::edgeColor() const {
-    return (currentMode == Dark) ? darkEdge : lightEdge;
+QColor ThemeManager::edgeColor(bool isDarkMode) const {
+    return (isDarkMode) ? darkEdge : lightEdge;
 }
 
-QColor ThemeManager::textColor() const {
-    return (currentMode == Dark) ? darkText : lightText;
+QColor ThemeManager::textColor(bool isDarkMode) const {
+    return (isDarkMode ? darkText : lightText);
 }
 
 QColor ThemeManager::backgroundColor(bool isDarkMode) const {
-    return isDarkMode ? darkBackground : lightBackground;
+    return (isDarkMode ? darkBackground : lightBackground);
 }
 
-QColor ThemeManager::buttonColor() const
+QColor ThemeManager::buttonColor(bool isDarkMode) const
 {
-    return (currentMode == Dark ? darkButton : lightButton);
+    return (isDarkMode ? darkButton : lightButton);
 }
 
-QColor ThemeManager::highlightColor() const {
-    return (currentMode == Dark ? highlightColorDark : highlightColorLight);
+QColor ThemeManager::highlightColor(bool isDarkMode) const {
+    return (isDarkMode ? highlightColorDark : highlightColorLight);
     }
 
 
