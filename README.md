@@ -14,7 +14,8 @@ It allows users to build graphs, run classical graph algorithms, and see **step-
 
 - 🧮 **Algorithm Simulations**  
   - DFS (Depth-First Search)  
-  - BFS (Breadth-First Search)  
+  - BFS (Breadth-First Search)
+  - Cycle Detection Algorithms (Directed & Un-directed) 
   - Dijkstra (Shortest Path)  
   - Bellman-Ford (Shortest Path with negatives)  
   - Floyd-Warshall (All-Pairs Shortest Paths)  
