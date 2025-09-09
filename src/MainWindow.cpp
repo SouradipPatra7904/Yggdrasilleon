@@ -220,17 +220,15 @@ void MainWindow::runAlgorithm() {
     std::string start = startNodeInput->text().toStdString();
     std::string end = endNodeInput->text().toStdString();
 
-    // BFS, DFS, Shortest Path Algorithms must have a start and goal nodes.
-    if(algo == "BFS" || algo == "DFS"){
-        if (start.empty() || end.empty()) {
-            QMessageBox::warning(this,"Invalid Input","Start/End cannot be empty."); 
+    // BFS, DFS, Prim's MST Algorithms must have a start node.
+    // Bellman-Ford & Dijkstra's Algorithms must have a start node.
+
+    if(algo == "DFS" || algo == "BFS" || algo == "Dijkstra" || algo == "Bellman-Ford" || algo == "Prim's MST")
+    {
+        if (start.empty()) {
+            QMessageBox::warning(this,"Invalid Input","Start Node cannot be empty."); 
             return; 
         }
-    }
-    // Prim's Algorithm must take the starting node as input for it's greedy approach.
-    if(algo == "Prim's MST" && start.empty()){
-        QMessageBox::warning(this,"Invalid Input","Start cannot be empty."); 
-        return;
     }
 
     currentSteps.clear();
@@ -336,18 +334,18 @@ void MainWindow::updateAlgorithmControls(int index) {
     //startNodeInput->setDisabled(isMST);
     //endNodeInput->setDisabled(isMST);
 
-    if(algo == "Prim's MST"){
+    // DFS / BFS / Dijkstra / Bellman-Ford / Prim's MST requires a start node
+    if(algo == "DFS" || algo == "BFS" || algo == "Dijkstra" || algo == "Bellman-Ford" || algo == "Prim's MST"){
         endNodeInput->setDisabled(true);
+        (*endNodeInput).clear();
     }
 
-    if(algo == "Kruskal's MST"){
+    if(algo == "Kruskal's MST" || algo == "Floyd-Warshall" || algo.contains("Cycle")){
         startNodeInput->setDisabled(true);
-        endNodeInput->setDisabled(true);
-    }
+        (*startNodeInput).clear();
 
-    if(algo.contains("Cycle")){
-        startNodeInput->setDisabled(true);
         endNodeInput->setDisabled(true);
+        (*endNodeInput).clear();
     }
 }
 

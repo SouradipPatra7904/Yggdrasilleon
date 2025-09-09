@@ -10,4 +10,4 @@ Depends: yggdrasilleon (= 1.0-1)
 Section: debug
 Priority: optional
 Description: debug symbols for yggdrasilleon
-Build-Ids: b5d1078b2c2b690063d75f5d2f3b378e35faeac9
+Build-Ids: 42e9a0cb14df9d78f254d5ef11a7d565490180c0
